@@ -1,26 +1,160 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@theme {
+  /* Colors */
+  --color-lavender-50: #fbf5ff;
+  --color-lavender-100: #f3e6ff;
+  --color-lavender-200: #e8d1ff;
+  --color-lavender-300: #d6b3ff;
+  --color-lavender-400: #bd85ff;
+  --color-lavender-500: #a855f7;
+  --color-lavender-600: #9333ea;
+  --color-lavender-700: #7e22ce;
+  --color-lavender-800: #6b21a8;
+  --color-lavender-900: #581c87;
+  --color-lavender-950: #3b0764;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-glass-white: rgba(255, 255, 255, 0.65);
+  --color-glass-border: rgba(255, 255, 255, 0.45);
+  --color-glass-highlight: rgba(255, 255, 255, 0.2);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* iOS-like Blur Variables */
+  --backdrop-blur-md: 12px;
+  --backdrop-blur-lg: 20px;
+  --backdrop-blur-xl: 40px;
+
+  /* Shadows */
+  --shadow-soft: 0 10px 40px -10px rgba(0, 0, 0, 0.05);
+  --shadow-glass: 0 15px 35px 0 rgba(31, 38, 135, 0.1);
+  --shadow-glow: 0 0 20px rgba(168, 85, 247, 0.3);
+
+  /* Animations */
+  --animate-float: float 4s ease-in-out infinite;
+  --animate-pulse-soft: pulse-soft 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+  /* New Liquid Animations */
+  --animate-heartbeat: heartbeat 4.5s ease-in-out infinite;
+  --animate-drift: drift 40s linear infinite;
+
+  @keyframes heartbeat {
+
+    0%,
+    100% {
+      transform: scale(1);
+    }
+
+    50% {
+      transform: scale(1.04);
+    }
+  }
+
+  @keyframes drift {
+    0% {
+      background-position: 0% 50%;
+    }
+
+    50% {
+      background-position: 100% 50%;
+    }
+
+    100% {
+      background-position: 0% 50%;
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  body {
+    /* Liquid Gradient Mesh Background */
+    background:
+      radial-gradient(at 0% 0%, rgba(248, 204, 252, 0.5) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(196, 235, 255, 0.5) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(252, 231, 243, 0.5) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, rgba(221, 214, 254, 0.5) 0px, transparent 50%);
+    background-color: #f8faff;
+    background-attachment: fixed;
+
+    @apply min-h-screen text-slate-800 dark:text-slate-100 antialiased font-sans selection:bg-rose-100 selection:text-rose-900 overflow-x-hidden transition-colors duration-500;
+  }
+
+  .dark body {
+    /* Night Mode Liquid Gradient */
+    background:
+      radial-gradient(at 0% 0%, rgba(76, 29, 149, 0.4) 0px, transparent 50%),
+      /* Deep Purple */
+      radial-gradient(at 100% 0%, rgba(30, 58, 138, 0.4) 0px, transparent 50%),
+      /* Deep Blue */
+      radial-gradient(at 100% 100%, rgba(88, 28, 135, 0.4) 0px, transparent 50%),
+      /* Dark Fuchsia */
+      radial-gradient(at 0% 100%, rgba(17, 24, 39, 0.8) 0px, transparent 50%);
+    /* Dark Slate */
+    background-color: #0f172a;
+    /* slate-900 */
+  }
+
+  /* Noise Texture Overlay matches */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+    opacity: 0.05;
+    pointer-events: none;
+    z-index: 50;
+  }
+}
+
+/* Glassmorphism utilities */
+/* Glassmorphism utilities */
+.glass-card {
+  @apply relative bg-white/40 dark:bg-slate-900/60 backdrop-blur-[32px] border border-white/40 dark:border-white/10 rounded-[30px] transition-all duration-300;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.1);
+}
+
+.glass-card::before {
+  content: "";
+  @apply absolute inset-0 rounded-[30px] bg-gradient-to-br from-white/40 via-white/10 to-transparent dark:from-white/10 dark:via-white/5 opacity-60 pointer-events-none;
+}
+
+.glass-card:hover {
+  @apply bg-white/50 dark:bg-slate-900/80 -translate-y-[2px];
+  box-shadow: 0 35px 90px rgba(0, 0, 0, 0.12);
+}
+
+.glass-input {
+  @apply w-full h-12 px-6 rounded-full bg-white/40 dark:bg-slate-800/60 backdrop-blur-md border border-white/40 dark:border-white/10 text-slate-700 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-300/50 dark:focus:ring-violet-500/50 focus:bg-white/60 dark:focus:bg-slate-800/90 transition-all shadow-inner;
+}
+
+.btn-secondary {
+  @apply px-6 py-3 rounded-full bg-white/70 dark:bg-slate-800/80 backdrop-blur-md text-slate-700 dark:text-slate-100 font-medium hover:bg-white dark:hover:bg-slate-700 transition-all active:scale-95 shadow-sm border border-white/50 dark:border-white/10;
+}
+
+/* Sidebar Tab Headers */
+.glass-tab-header {
+  @apply flex items-center gap-2 px-5 py-3 border-b border-white/40 dark:border-white/10 bg-white/50 dark:bg-slate-900/70 backdrop-blur-md text-slate-700 dark:text-slate-200 font-bold uppercase tracking-wider text-[11px] rounded-t-[24px] shadow-sm relative z-10;
+}
+
+.glass-panel-container {
+  @apply bg-white/40 dark:bg-slate-900/50 backdrop-blur-[32px] border border-white/50 dark:border-white/10 shadow-soft rounded-[24px] flex flex-col transition-all duration-300 overflow-hidden relative;
+}
+
+.glass-panel-container:hover {
+  @apply border-white/70 dark:border-white/20 shadow-lg;
+}
+
+/* Re-add specific dark overrides if needed for specific text colors not hitting inherited rules */
+.text-slate-700 {
+  @apply dark:text-slate-100;
+}
+
+.text-slate-600 {
+  @apply dark:text-slate-300;
+}
+
+.text-slate-500 {
+  @apply dark:text-slate-400;
+}
+
+.text-slate-400 {
+  @apply dark:text-slate-500;
 }
