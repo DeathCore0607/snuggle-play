@@ -74,18 +74,35 @@ export function useWebRTC(roomId: string) {
         };
     }, []);
 
+    const iceServersRef = useRef<RTCIceServer[]>([{ urls: STUN_URLS }]);
+
+    // Fetch TURN credentials on mount
+    useEffect(() => {
+        async function fetchIceServers() {
+            try {
+                const res = await fetch("/api/turn");
+                if (res.ok) {
+                    const servers = await res.json();
+                    if (Array.isArray(servers)) {
+                        console.log("Using TURN servers from API");
+                        iceServersRef.current = servers;
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to fetch TURN servers, using default STUN", e);
+            }
+        }
+        fetchIceServers();
+    }, []);
+
     const createPeer = (peerId?: string) => {
         if (peerRef.current) return peerRef.current;
         if (peerId) remotePeerIdRef.current = peerId;
 
         console.log("Creating RTCPeerConnection");
 
-        const iceServers: RTCIceServer[] = [{ urls: STUN_URLS }];
-
-
-
         const pc = new RTCPeerConnection({
-            iceServers
+            iceServers: iceServersRef.current
         });
 
         peerRef.current = pc;
