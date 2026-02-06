@@ -244,7 +244,6 @@ export default function RoomPage() {
                     </AnimatePresence>
 
                     <Controls
-                        localStream={localStream}
                         toggleMic={toggleMic}
                         toggleCam={toggleCam}
                         toggleShare={roomState.isScreenSharing && roomState.sharerId === me.id ? stopShare : startShare}
