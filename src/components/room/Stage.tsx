@@ -44,6 +44,7 @@ export function Stage({ stream }: StageProps) {
                 ref={videoRef}
                 autoPlay
                 playsInline
+                muted={isMe}
                 className="w-full h-full object-contain"
             />
 

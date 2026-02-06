@@ -7,10 +7,7 @@ const STUN_URLS = [
     "stun:stun1.l.google.com:19302",
 ];
 
-// Optional: TURN Server config from Env Vars for better remote connectivity
-const TURN_URL = process.env.NEXT_PUBLIC_TURN_URL;
-const TURN_USERNAME = process.env.NEXT_PUBLIC_TURN_USERNAME;
-const TURN_CREDENTIAL = process.env.NEXT_PUBLIC_TURN_PASSWORD;
+
 
 export function useWebRTC(roomId: string) {
     const { me, roomState } = useStore();
@@ -85,14 +82,7 @@ export function useWebRTC(roomId: string) {
 
         const iceServers: RTCIceServer[] = [{ urls: STUN_URLS }];
 
-        if (TURN_URL && TURN_USERNAME && TURN_CREDENTIAL) {
-            iceServers.push({
-                urls: TURN_URL,
-                username: TURN_USERNAME,
-                credential: TURN_CREDENTIAL
-            });
-            console.log("Using configured TURN server");
-        }
+
 
         const pc = new RTCPeerConnection({
             iceServers
