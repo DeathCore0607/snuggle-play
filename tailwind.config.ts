@@ -11,6 +11,26 @@ const config: Config = {
     theme: {
         extend: {
             colors: {
+                background: "var(--bg-app)",
+                surface: {
+                    DEFAULT: "var(--bg-panel)",
+                    hover: "var(--bg-panel-hover)",
+                    elevated: "var(--bg-panel-elevated)",
+                },
+                border: {
+                    DEFAULT: "var(--border-panel)",
+                    hover: "var(--border-panel-hover)",
+                },
+                text: {
+                    primary: "var(--text-primary)",
+                    secondary: "var(--text-secondary)",
+                    muted: "var(--text-muted)",
+                },
+                accent: {
+                    DEFAULT: "var(--accent-primary)",
+                    glow: "var(--accent-glow)",
+                },
+                // Retain legacy for compatibility if needed, using exact hexes or vars
                 lavender: {
                     50: "#fdf8ff",
                     100: "#f8f0ff",
@@ -22,11 +42,6 @@ const config: Config = {
                 baby: {
                     blue: "#dbeafe",
                     pink: "#fce7f3",
-                },
-                glass: {
-                    white: "rgba(255, 255, 255, 0.7)",
-                    border: "rgba(255, 255, 255, 0.2)",
-                    low: "rgba(255, 255, 255, 0.4)",
                 },
             },
             borderRadius: {

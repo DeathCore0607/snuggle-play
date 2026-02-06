@@ -84,7 +84,7 @@ export default function Home() {
             </div>
           </div>
 
-          <h1 className="text-4xl font-bold bg-gradient-to-br from-violet-600 to-rose-500 bg-clip-text text-transparent mb-3 tracking-tight">
+          <h1 className="text-4xl font-bold bg-gradient-to-br from-violet-600 to-rose-500 bg-clip-text text-transparent mb-3 tracking-tight pb-2">
             SnugglePlay
           </h1>
 
@@ -148,9 +148,12 @@ export default function Home() {
 
                 <button
                   onClick={() => setIsJoining(true)}
-                  className="w-full h-12 rounded-full bg-white/40 border border-white/60 text-slate-600 dark:text-slate-600 font-semibold hover:bg-white/60 hover:text-slate-800 dark:hover:text-slate-800 transition-all text-sm active:scale-95"
+                  className="relative w-full h-14 rounded-full bg-white/30 dark:bg-white/10 border border-white/30 dark:border-white/15 backdrop-blur-md text-slate-600 font-bold text-lg shadow-[0_10px_30px_rgba(0,0,0,0.10)] dark:shadow-[0_10px_30px_rgba(0,0,0,0.35)] hover:bg-white/40 dark:hover:bg-white/20 hover:-translate-y-[1px] hover:shadow-[0_15px_35px_rgba(0,0,0,0.12)] active:translate-y-0 active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none group overflow-hidden flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70"
                 >
-                  Join with Invite Link
+                  <span className="relative z-10 flex items-center justify-center gap-2">
+                    Join with Invite Link
+                    <Heart size={16} strokeWidth={2.5} className="text-rose-400/80 group-hover:text-rose-500 transition-colors" />
+                  </span>
                 </button>
               </motion.div>
             ) : (

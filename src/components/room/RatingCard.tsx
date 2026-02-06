@@ -95,17 +95,17 @@ export function RatingCard() {
                         <Button size="sm" onClick={setTrack} disabled={!trackInput} className="rounded-full h-9 px-4">Set</Button>
                     </div>
                 ) : (
-                    <div className="p-3 bg-white/50 dark:bg-slate-800/60 rounded-[20px] border border-white/50 dark:border-white/10 text-center shadow-inner relative group backdrop-blur-sm">
+                    <div className="p-3 bg-lavender-50/50 dark:bg-slate-800/60 rounded-[20px] border border-lavender-100 dark:border-white/10 text-center shadow-inner relative group backdrop-blur-sm">
                         {roomState.trackTitle ? (
                             <>
-                                <div className="text-[10px] text-slate-400 dark:text-slate-400 uppercase tracking-widest font-bold mb-1">Current Track</div>
-                                <div className="font-medium text-slate-800 dark:text-slate-100 line-clamp-2">{roomState.trackTitle}</div>
+                                <div className="text-[10px] text-lavender-400 dark:text-slate-400 uppercase tracking-widest font-bold mb-1">Current Track</div>
+                                <div className="font-medium text-lavender-900 dark:text-slate-100 line-clamp-2">{roomState.trackTitle}</div>
                                 {isHost && (
-                                    <button onClick={() => socket.emit("rating:setTrack", "")} className="text-[10px] text-blue-400 mt-1 hover:underline opacity-0 group-hover:opacity-100 transition-opacity">Change</button>
+                                    <button onClick={() => socket.emit("rating:setTrack", "")} className="text-[10px] text-lavender-500 mt-1 hover:underline opacity-0 group-hover:opacity-100 transition-opacity">Change</button>
                                 )}
                             </>
                         ) : (
-                            <div className="text-sm text-slate-400 dark:text-slate-400 italic">Waiting for host to set track...</div>
+                            <div className="text-sm text-lavender-400/70 dark:text-slate-400 italic">Waiting for host to set track...</div>
                         )}
                     </div>
                 )}
@@ -149,25 +149,25 @@ export function RatingCard() {
                 {/* Status / Results */}
                 <div className="grid grid-cols-2 gap-3">
                     {/* My Status */}
-                    <div className={cn("bg-white/40 dark:bg-slate-800/40 p-3 rounded-[20px] text-center border border-white/60 dark:border-white/10 transition-all", confirmed ? "bg-lavender-50/50 dark:bg-lavender-900/20 border-lavender-200 dark:border-lavender-500/30 shadow-inner" : "")}>
-                        <div className="text-[9px] text-slate-400 uppercase font-extrabold tracking-wider mb-1">You</div>
-                        <div className={cn("text-3xl font-black transition-all", confirmed ? "text-lavender-600 dark:text-lavender-400" : "text-slate-300 dark:text-slate-600")}>
+                    <div className={cn("p-4 rounded-[24px] text-center transition-all border", confirmed ? "bg-lavender-100/60 dark:bg-lavender-900/20 border-lavender-200 dark:border-lavender-500/30 shadow-inner" : "!bg-white dark:!bg-white/5 border-lavender-100 dark:border-white/10 shadow-sm")}>
+                        <div className="text-[10px] text-lavender-400 dark:text-slate-400 uppercase font-black tracking-widest mb-1">You</div>
+                        <div className={cn("text-4xl font-black transition-all", confirmed ? "text-lavender-500 dark:text-lavender-400" : "text-lavender-300/50 dark:text-slate-500")}>
                             {confirmed ? selectedRating : (selectedRating || "-")}
                         </div>
                         {confirmed && !bothRated && <div className="text-[9px] text-lavender-400 font-bold mt-1">LOCKED 🔒</div>}
                     </div>
 
                     {/* Partner Status */}
-                    <div className="bg-white/40 dark:bg-slate-800/40 p-3 rounded-[20px] text-center border border-white/60 dark:border-white/10 relative overflow-hidden transition-all">
-                        <div className="text-[9px] text-slate-400 uppercase font-extrabold tracking-wider mb-1">Partner</div>
-                        <div className={cn("text-3xl font-black transition-all", bothRated ? "text-blue-600 dark:text-blue-400" : "text-slate-300 dark:text-slate-600")}>
+                    <div className="!bg-white dark:!bg-white/5 p-4 rounded-[24px] text-center relative overflow-hidden transition-all shadow-sm border border-lavender-100 dark:border-white/10">
+                        <div className="text-[10px] text-lavender-400 dark:text-slate-400 uppercase font-black tracking-widest mb-1">Partner</div>
+                        <div className={cn("text-4xl font-black transition-all", bothRated ? "text-blue-500 dark:text-blue-400" : "text-lavender-300/50 dark:text-slate-500")}>
                             {bothRated ? partnerRating : (partnerHasRated ? "?" : "-")}
                         </div>
                         {!bothRated && partnerHasRated && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-slate-800/80 backdrop-blur-[2px]">
+                            <div className="absolute inset-0 flex items-center justify-center bg-white/60 dark:bg-slate-800/60 backdrop-blur-[4px]">
                                 <div className="flex flex-col items-center animate-bounce">
-                                    <span className="text-xl">✨</span>
-                                    <span className="text-[9px] font-bold text-slate-500 dark:text-slate-300 uppercase">Ready</span>
+                                    <span className="text-2xl drop-shadow-md">✨</span>
+                                    <span className="text-[10px] font-black text-lavender-600 dark:text-slate-300 uppercase tracking-wider">Ready</span>
                                 </div>
                             </div>
                         )}

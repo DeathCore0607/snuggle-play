@@ -20,17 +20,17 @@ export function Stage({ stream }: StageProps) {
 
     if (!roomState?.isScreenSharing) {
         return (
-            <div className="w-full aspect-video glass-card flex flex-col items-center justify-center text-slate-400 relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
+            <div className="w-full aspect-video glass-card flex flex-col items-center justify-center text-muted relative overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent dark:from-white/5 pointer-events-none" />
 
-                <div className="w-24 h-24 bg-white/30 rounded-full flex items-center justify-center mb-6 text-violet-300 shadow-glow animate-float backdrop-blur-sm">
+                <div className="w-24 h-24 bg-surface-elevated rounded-full flex items-center justify-center mb-6 text-accent shadow-glow animate-float backdrop-blur-sm">
                     <Monitor size={48} className="opacity-80" />
                 </div>
-                <h3 className="text-xl font-bold text-slate-600 mb-2 tracking-tight">The screen is cozy and empty 🫧</h3>
-                <p className="text-sm text-slate-500 font-medium bg-white/40 px-4 py-1.5 rounded-full backdrop-blur-sm">
+                <h3 className="text-xl font-bold text-primary mb-2 tracking-tight">The screen is cozy and empty 🫧</h3>
+                <p className="text-sm text-secondary font-medium bg-surface px-4 py-1.5 rounded-full backdrop-blur-sm">
                     Tap &apos;Share Screen&apos; and we&apos;ll watch together.
                 </p>
-                <p className="text-[10px] text-slate-400 mt-2 opacity-70">(Your partner will see it instantly)</p>
+                <p className="text-[10px] text-muted mt-2 opacity-70">(Your partner will see it instantly)</p>
             </div>
         );
     }

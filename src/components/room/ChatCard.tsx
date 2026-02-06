@@ -31,15 +31,15 @@ export function ChatCard() {
 
             {/* Tab Header */}
             <div className="glass-tab-header">
-                <div className="p-1 bg-white/50 rounded-md shadow-sm">
-                    <MessageSquare size={14} className="text-violet-500" />
+                <div className="p-1 bg-surface rounded-md shadow-sm">
+                    <MessageSquare size={14} className="text-accent" />
                 </div>
                 <span>Chat</span>
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-3 p-4 scrollbar-thin scrollbar-thumb-white/50 scrollbar-track-transparent z-10">
+            <div className="flex-1 overflow-y-auto space-y-3 p-4 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent z-10">
                 {messages.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-slate-400 space-y-2">
+                    <div className="flex flex-col items-center justify-center h-full text-muted space-y-2">
                         <div className="text-4xl opacity-50">💭</div>
                         <div className="text-xs font-medium opacity-60">No messages yet. Say hi!</div>
                     </div>
@@ -52,11 +52,11 @@ export function ChatCard() {
                                     "max-w-[85%] px-4 py-2.5 text-sm shadow-sm backdrop-blur-sm border transition-all hover:scale-[1.02]",
                                     isMe
                                         ? "bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white rounded-[1.2rem] rounded-tr-sm border-white/20 shadow-violet-500/10"
-                                        : "bg-white/70 dark:bg-slate-700/80 text-slate-700 dark:text-slate-100 rounded-[1.2rem] rounded-tl-sm border-white/60 dark:border-white/20 shadow-sm"
+                                        : "bg-surface-elevated text-primary rounded-[1.2rem] rounded-tl-sm border-border shadow-sm"
                                 )}>
                                     {msg.text}
                                 </div>
-                                <span className="text-[9px] text-slate-400 dark:text-slate-500 px-1 font-medium">
+                                <span className="text-[9px] text-muted px-1 font-medium">
                                     {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </span>
                             </div>
@@ -66,7 +66,7 @@ export function ChatCard() {
                 <div ref={bottomRef} />
             </div >
 
-            <div className="p-3 bg-white/20 border-t border-white/20 z-10">
+            <div className="p-3 bg-surface-elevated border-t border-border z-10">
                 <div className="flex gap-2">
                     <div className="relative flex-1">
                         <Input

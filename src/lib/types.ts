@@ -17,7 +17,7 @@ export interface RoomState {
     ratings: Record<string, number>; // socketId -> rating
 }
 
-export type ReactionEmoji = "❤️" | "😂" | "😮" | "🥺" | "🔥" | "✨";
+export type ReactionEmoji = string;
 
 export interface ChatMessage {
     id: string;

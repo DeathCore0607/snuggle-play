@@ -15,8 +15,10 @@ import { RatingCard } from "@/components/room/RatingCard";
 import { ActivityLog } from "@/components/room/ActivityLog";
 import { RatingResultOverlay } from "@/components/room/RatingResultOverlay";
 import { ReactionOverlay } from "@/components/room/ReactionOverlay";
+import { CozyStage } from "@/components/room/CozyStage";
 import { Button } from "@/components/ui/Button";
 import { Copy, Check } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 
 export default function RoomPage() {
     const { roomId } = useParams() as { roomId: string };
@@ -155,15 +157,15 @@ export default function RoomPage() {
             {/* Invite Link (Host Only) */}
             {isHost && (
                 <div className="flex justify-center mt-2 px-4 shrink-0">
-                    <div className="bg-white/40 border border-white/50 rounded-xl p-1.5 flex items-center shadow-sm max-w-lg w-full">
+                    <div className="bg-surface/60 backdrop-blur-md border border-border rounded-xl p-1.5 flex items-center shadow-sm max-w-lg w-full">
                         <div className="flex items-center space-x-2 px-2 overflow-hidden flex-1">
-                            <span className="text-[10px] font-bold text-slate-500 shrink-0">INVITE LINK:</span>
-                            <div className="text-[10px] text-slate-600 truncate font-mono select-all">
+                            <span className="text-[10px] font-bold text-muted shrink-0">INVITE LINK:</span>
+                            <div className="text-[10px] text-secondary truncate font-mono select-all">
                                 {typeof window !== 'undefined' && `${window.location.host}/room/${roomId}#secret=${secret?.slice(0, 8)}...`}
                             </div>
                         </div>
                         <Button size="sm" variant="secondary" onClick={copyLink} className="h-6 text-[10px] px-2 shrink-0">
-                            {copied ? <Check size={12} className="mr-1 text-green-500" /> : <Copy size={12} className="mr-1" />}
+                            {copied ? <Check size={12} className="mr-1 text-emerald-500" /> : <Copy size={12} className="mr-1" />}
                             {copied ? "Copied" : "Copy"}
                         </Button>
                     </div>
@@ -172,7 +174,7 @@ export default function RoomPage() {
 
             {!isHost && (
                 <div className="flex justify-center mt-2 shrink-0">
-                    <div className="text-[10px] text-center text-slate-400 bg-white/20 rounded-full py-0.5 px-3">
+                    <div className="text-[10px] text-center text-muted bg-surface/50 rounded-full py-0.5 px-3 backdrop-blur-sm">
                         Invite received via link 💌
                     </div>
                 </div>
@@ -180,29 +182,66 @@ export default function RoomPage() {
 
             {/* Main Content - Full Height/Width */}
             <div className="flex flex-1 overflow-hidden p-4 gap-4">
-                {/* Left: Stage (Flex Grow, Full Height) */}
-                <div className="flex-1 min-w-0 h-full relative flex flex-col">
-                    <Stage stream={stageStream} />
-                </div>
+
+                <AnimatePresence mode="wait">
+                    {!roomState.isScreenSharing ? (
+                        /* MODE A: Cozy Camera Stage (Center) */
+                        <motion.div
+                            key="cozy-stage"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.5 }}
+                            className="flex-1 min-w-0 h-full relative"
+                        >
+                            <CozyStage
+                                localUser={me}
+                                localStream={localStream}
+                                remoteUser={partner}
+                                remoteStream={remoteStream}
+                            />
+                        </motion.div>
+                    ) : (
+                        /* MODE B: Screen Share Stage (Center) */
+                        <motion.div
+                            key="screen-stage"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 1.05 }}
+                            transition={{ duration: 0.5 }}
+                            className="flex-1 min-w-0 h-full relative flex flex-col"
+                        >
+                            <Stage stream={stageStream} />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 {/* Right: Sidebar (Fixed Width 350px, Scrollable) */}
                 <div className="w-[320px] lg:w-[350px] shrink-0 flex flex-col gap-3 overflow-y-auto pb-2 pr-1 scrollbar-thin scrollbar-thumb-slate-200">
 
-
-                    {/* Cameras */}
-                    <div className="grid grid-cols-2 gap-2 shrink-0">
-                        <div className="relative aspect-square bg-black/5 rounded-xl overflow-hidden shadow-inner">
-                            <CameraView user={me} stream={localStream} isLocal />
-                        </div>
-                        <div className="relative aspect-square bg-black/5 rounded-xl overflow-hidden shadow-inner">
-                            <CameraView user={partner || { name: "Waiting...", id: "", role: "guest", micMuted: false, camOff: false } as any} stream={remoteStream} />
-                            {!partner && (
-                                <div className="absolute inset-0 bg-slate-100/80 flex items-center justify-center z-10 backdrop-blur-[1px]">
-                                    <span className="text-[10px] text-slate-400 font-medium px-1 text-center leading-tight">Waiting for partner...</span>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                    {/* Cameras - Only show in Sidebar if Screen Sharing is active */}
+                    <AnimatePresence>
+                        {roomState.isScreenSharing && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="grid grid-cols-2 gap-2 shrink-0"
+                            >
+                                <motion.div layoutId="camera-local" className="relative aspect-square rounded-xl overflow-hidden shadow-sm">
+                                    <CameraView user={me} stream={localStream} isLocal />
+                                </motion.div>
+                                <motion.div layoutId="camera-remote" className="relative aspect-square rounded-xl overflow-hidden shadow-sm">
+                                    <CameraView user={partner || { name: "Waiting...", id: "", role: "guest", micMuted: false, camOff: false } as any} stream={remoteStream} />
+                                    {!partner && (
+                                        <div className="absolute inset-0 bg-surface/80 flex items-center justify-center z-10 backdrop-blur-[1px]">
+                                            <span className="text-[10px] text-muted font-medium px-1 text-center leading-tight">Waiting for partner...</span>
+                                        </div>
+                                    )}
+                                </motion.div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
                     <Controls
                         localStream={localStream}
