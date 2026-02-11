@@ -18,7 +18,7 @@ import { v4 as uuidv4 } from "uuid";
 // If specific alias mapping is needed, we might need to rely on tsconfig-paths or just relative. Relative is safest.
 
 const dev = process.env.NODE_ENV !== "production";
-const hostname = "localhost";
+const hostname = "0.0.0.0";
 const port = parseInt(process.env.PORT || "3000", 10);
 
 const app = next({ dev, hostname, port });
@@ -29,6 +29,7 @@ interface ServerRoom extends RoomState {
     secret: string;
     activityLog: LogEntry[];
     createdAt: number;
+    crownTimeout?: NodeJS.Timeout;
 }
 
 const rooms = new Map<string, ServerRoom>();
@@ -113,6 +114,8 @@ app.prepare().then(() => {
                     ratings: {},
                     activityLog: [],
                     createdAt: Date.now(),
+                    crownedUserId: null,
+                    gameState: null,
                 };
                 rooms.set(roomId, room);
                 logActivity(roomId, "join", `Room created by ${name}`, "✨");
@@ -244,6 +247,43 @@ app.prepare().then(() => {
             logActivity(currentRoomId, "share", `${currentUser.name} stopped sharing`, "⏹️");
         });
 
+        socket.on("room:crown", (targetUserId) => {
+            if (!currentRoomId || !currentUser || currentUser.role !== "host") return;
+            const roomId = currentRoomId; // Capture locally
+            const room = rooms.get(roomId);
+            if (!room) return;
+
+            // Clear existing timeout if any
+            if (room.crownTimeout) {
+                clearTimeout(room.crownTimeout);
+                room.crownTimeout = undefined;
+            }
+
+            // Apply Crown
+            room.crownedUserId = targetUserId;
+            // const targetUser = room.users.find(u => u.id === targetUserId);
+            // logActivity(roomId, "crown", `Queen ${targetUser?.name || "Guest"} was crowned!`, "👸");
+
+            io.to(roomId).emit("room:state", room);
+            console.log(`[Crown] Applied to ${targetUserId} in room ${roomId}`);
+
+            // Auto-remove after 5 seconds
+            room.crownTimeout = setTimeout(() => {
+                const r = rooms.get(roomId);
+                if (r) {
+                    console.log(`[Crown] Timeout fired for room ${roomId}. Current crowned: ${r.crownedUserId}, Target: ${targetUserId}`);
+                    if (r.crownedUserId === targetUserId) {
+                        r.crownedUserId = null;
+                        r.crownTimeout = undefined;
+                        io.to(roomId).emit("room:state", r);
+                        console.log(`[Crown] Removed from ${targetUserId}`);
+                    }
+                } else {
+                    console.log(`[Crown] Room ${roomId} not found during timeout`);
+                }
+            }, 5000);
+        });
+
         socket.on("rating:setTrack", (title) => {
             if (!currentRoomId || !currentUser || currentUser.role !== "host") return;
             const room = rooms.get(currentRoomId);
@@ -313,6 +353,237 @@ app.prepare().then(() => {
             socket.to(roomId).emit("signal", { sender: socket.id, signal });
         });
 
+        socket.on("game:start", (type) => {
+            if (!currentRoomId || !currentUser) return;
+            const room = rooms.get(currentRoomId);
+            if (!room) return;
+
+            // Only allow start if 2 players? Or allow solo testing? User said "synced with both users".
+            // Let's allow solo for now but logic works best with 2.
+            // Requirement: "first turn will be of the one who startes"
+            // "next turn will be of the other person"
+
+            const p1 = socket.id;
+            const otherPlayer = room.users.find(u => u.id !== socket.id);
+            const p2 = otherPlayer ? otherPlayer.id : null;
+
+            // If no second player, p2 is null? Or just user plays alone?
+            // "if any one of the users starts a game, it should also open on the other users screen"
+
+            const participants = [p1];
+            if (p2) participants.push(p2);
+
+            let initialBoard: any;
+            if (type === "ttt") initialBoard = Array(9).fill(null);
+            if (type === "c4") initialBoard = Array.from({ length: 6 }, () => Array(7).fill(null));
+
+            room.gameState = {
+                type,
+                activePlayerId: p1,
+                participants,
+                board: initialBoard,
+                winner: null,
+                isDraw: false
+            };
+
+            io.to(currentRoomId).emit("game:started", room.gameState);
+            logActivity(currentRoomId, "match", `${currentUser.name} started ${type === "ttt" ? "Tic Tac Toe" : "Connect 4"}`, "🎮");
+        });
+
+        socket.on("game:move", (move) => {
+            if (!currentRoomId || !currentUser) return;
+            const room = rooms.get(currentRoomId);
+            if (!room || !room.gameState) return;
+
+            const game = room.gameState;
+
+            // Validate turn
+            if (game.activePlayerId !== socket.id) return;
+            if (game.winner || game.isDraw) return;
+
+            // Apply move based on game type
+            if (game.type === "ttt") {
+                const index = move as number;
+                if (game.board[index]) return; // Occupied
+
+                // Mark spot
+                // In TTT: p1 is "heart", p2 is "crown". 
+                // We need to store who is who? 
+                // Or just: activePlayerId is current symbol.
+                // Let's store symbol? 
+                // Or easier: participants[0] = heart, participants[1] = crown.
+                const isP1 = socket.id === game.participants[0];
+                const symbol = isP1 ? "heart" : "crown";
+
+                game.board[index] = symbol;
+
+                // Check win
+                const wins = [
+                    [0, 1, 2], [3, 4, 5], [6, 7, 8],
+                    [0, 3, 6], [1, 4, 7], [2, 5, 8],
+                    [0, 4, 8], [2, 4, 6]
+                ];
+
+                let won = false;
+                for (let [a, b, c] of wins) {
+                    if (game.board[a] && game.board[a] === game.board[b] && game.board[a] === game.board[c]) {
+                        won = true;
+                        game.winner = socket.id;
+                        break;
+                    }
+                }
+
+                if (!won && !game.board.includes(null)) {
+                    game.isDraw = true;
+                }
+
+                // Switch turn
+                if (!won && !game.isDraw) {
+                    // Find next player
+                    const nextPlayer = game.participants.find(id => id !== socket.id);
+                    if (nextPlayer) game.activePlayerId = nextPlayer;
+                    // If single player, keep turn?
+                    else game.activePlayerId = socket.id;
+                }
+
+            } else if (game.type === "c4") {
+                const col = move as number;
+                // Connect 4 logic
+                // Board is 6 rows, 7 cols
+                const board = game.board;
+                // Find row
+                let placedRow = -1;
+                for (let r = 5; r >= 0; r--) {
+                    if (!board[r][col]) {
+                        const isP1 = socket.id === game.participants[0];
+                        const color = isP1 ? "pink" : "purple";
+                        board[r][col] = color;
+                        placedRow = r;
+                        break;
+                    }
+                }
+
+                if (placedRow === -1) return; // Column full
+
+                // Check win
+                const checkWin = (r: number, c: number, color: string) => {
+                    // Horizontal, Vertical, Diagonal
+                    const dirs = [[0, 1], [1, 0], [1, 1], [1, -1]];
+                    const ROWS = 6;
+                    const COLS = 7;
+                    for (let [dr, dc] of dirs) {
+                        let count = 1;
+                        // Forward
+                        let nr = r + dr, nc = c + dc;
+                        while (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && board[nr][nc] === color) {
+                            count++;
+                            nr += dr; nc += dc;
+                        }
+                        // Backward
+                        nr = r - dr; nc = c - dc;
+                        while (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && board[nr][nc] === color) {
+                            count++;
+                            nr -= dr; nc -= dc;
+                        }
+                        if (count >= 4) return true;
+                    }
+                    return false;
+                };
+
+                const isP1 = socket.id === game.participants[0];
+                const color = isP1 ? "pink" : "purple";
+
+                if (checkWin(placedRow, col, color)) {
+                    game.winner = socket.id;
+                } else {
+                    // Check draw (board full)
+                    const isFull = board.every((row: any[]) => row.every(cell => cell !== null));
+                    if (isFull) game.isDraw = true;
+                }
+
+                // Switch turn
+                if (!game.winner && !game.isDraw) {
+                    const nextPlayer = game.participants.find(id => id !== socket.id);
+                    if (nextPlayer) game.activePlayerId = nextPlayer;
+                    else game.activePlayerId = socket.id;
+                }
+            }
+
+            io.to(currentRoomId).emit("game:update", game);
+            if (game.winner) {
+                const winnerName = room.users.find(u => u.id === game.winner)?.name || "Someone";
+                logActivity(currentRoomId, "match", `${winnerName} won the game!`, "🏆");
+
+                // Win Handling
+                // 1. Set Crown
+                room.crownedUserId = game.winner;
+                io.to(currentRoomId).emit("room:state", room);
+
+                // 2. Emit Win Event (for overlay)
+                io.to(currentRoomId).emit("game:won", {
+                    winnerId: game.winner,
+                    winnerName,
+                    type: game.type
+                });
+
+                // 3. Close Game automatically after delay
+                room.gameState = null;
+                io.to(currentRoomId).emit("game:closed");
+
+                // 4. Auto-remove crown after 5 seconds
+                setTimeout(() => {
+                    const r = rooms.get(currentRoomId);
+                    if (r && r.crownedUserId === game.winner) {
+                        r.crownedUserId = null;
+                        io.to(currentRoomId).emit("room:state", r);
+                    }
+                }, 5000);
+            }
+        });
+
+        socket.on("game:reset", () => {
+            if (!currentRoomId) return;
+            const room = rooms.get(currentRoomId);
+            if (!room || !room.gameState) return;
+
+            // Only participants can reset?
+            if (!room.gameState.participants.includes(socket.id)) return;
+
+            const type = room.gameState.type;
+            let initialBoard: any;
+            if (type === "ttt") initialBoard = Array(9).fill(null);
+            if (type === "c4") initialBoard = Array.from({ length: 6 }, () => Array(7).fill(null));
+
+            room.gameState.board = initialBoard;
+            room.gameState.winner = null;
+            room.gameState.isDraw = false;
+            // Reset turn to Player 1? Or loser starts? 
+            // "Reset" usually means fresh game. Let's reset to p1.
+            room.gameState.activePlayerId = room.gameState.participants[0];
+
+            io.to(currentRoomId).emit("game:update", room.gameState);
+            logActivity(currentRoomId, "match", "Game reset", "🔄");
+        });
+
+        socket.on("game:close", () => {
+            if (!currentRoomId) return;
+            const room = rooms.get(currentRoomId);
+            if (!room) return;
+
+            // if (!room.gameState.participants.includes(socket.id)) return; 
+            // Anyone can close? Let's say yes for now.
+
+            room.gameState = null;
+            io.to(currentRoomId).emit("game:closed");
+            // logActivity(currentRoomId, "match", "Game closed", "🛑");
+        });
+
+        socket.on("room:valentine", () => {
+            if (!currentRoomId || !currentUser) return;
+            io.to(currentRoomId).emit("room:valentine", { senderId: currentUser.id });
+            logActivity(currentRoomId, "valentine", `${currentUser.name} triggered Valentine Mode!`, "💖");
+        });
+
         socket.on("disconnect", () => {
             if (currentRoomId && currentUser) {
                 const room = rooms.get(currentRoomId);
@@ -347,3 +618,4 @@ app.prepare().then(() => {
         );
     });
 });
+

@@ -12,9 +12,11 @@ import { CameraView } from "@/components/room/CameraView";
 import { Controls } from "@/components/room/Controls";
 import { ChatCard } from "@/components/room/ChatCard";
 import { RatingCard } from "@/components/room/RatingCard";
+import GamesCard from "@/components/room/GamesCard";
 import { ActivityLog } from "@/components/room/ActivityLog";
 import { RatingResultOverlay } from "@/components/room/RatingResultOverlay";
 import { ReactionOverlay } from "@/components/room/ReactionOverlay";
+import { GameWinOverlay } from "@/components/room/GameWinOverlay";
 import { CozyStage } from "@/components/room/CozyStage";
 import { Button } from "@/components/ui/Button";
 import { Copy, Check } from "lucide-react";
@@ -60,31 +62,43 @@ export default function RoomPage() {
         setRoomId(roomId);
         setSecret(urlSecret);
 
+        const joinRoom = () => {
+            console.log("Joining room...", roomId);
+            socket.emit("room:join", { roomId, secret: urlSecret, name }, (res) => {
+                if (res.status === "error") {
+                    alert(res.error);
+                    router.push("/");
+                    return;
+                }
+                setMe({ id: socket.id, name, role: res.role });
+            });
+        };
+
         // 2. Socket Connection
         console.log("Connecting to socket...");
-        socket.connect();
+        if (!socket.connected) {
+            socket.connect();
+        } else {
+            // Already connected? Join immediately
+            joinRoom();
+        }
 
+        const onConnect = () => {
+            console.log("Socket connected/reconnected:", socket.id);
+            setIsConnected(true);
+            joinRoom();
+        };
+
+        const onDisconnect = () => {
+            console.log("Socket disconnected");
+            setIsConnected(false);
+        };
+
+        socket.on("connect", onConnect);
+        socket.on("disconnect", onDisconnect);
         socket.on("connect_error", (err) => {
             console.error("Socket connection error:", err);
             setIsConnected(false);
-        });
-
-        socket.on("connect", () => {
-            console.log("Socket connected successfully:", socket.id);
-            setIsConnected(true);
-        });
-
-        socket.on("disconnect", () => {
-            setIsConnected(false);
-        });
-
-        socket.emit("room:join", { roomId, secret: urlSecret, name }, (res) => {
-            if (res.status === "error") {
-                alert(res.error);
-                router.push("/");
-                return;
-            }
-            setMe({ id: socket.id, name, role: res.role });
         });
 
         // 3. Event Listeners
@@ -102,8 +116,14 @@ export default function RoomPage() {
         });
 
         return () => {
+            socket.off("connect", onConnect);
+            socket.off("disconnect", onDisconnect);
+            socket.off("connect_error");
+            socket.off("room:state");
+            socket.off("user:joined");
+            socket.off("chat:message");
+            socket.off("activity:log");
             socket.disconnect();
-            socket.off();
             reset();
         };
     }, [roomId, router, setRoomId, setSecret, setMe, setRoomState, addMessage, setLogs, reset]);
@@ -153,32 +173,7 @@ export default function RoomPage() {
             <StatusBar />
             <RatingResultOverlay />
             <ReactionOverlay />
-
-            {/* Invite Link (Host Only) */}
-            {isHost && (
-                <div className="flex justify-center mt-2 px-4 shrink-0">
-                    <div className="bg-surface/60 backdrop-blur-md border border-border rounded-xl p-1.5 flex items-center shadow-sm max-w-lg w-full">
-                        <div className="flex items-center space-x-2 px-2 overflow-hidden flex-1">
-                            <span className="text-[10px] font-bold text-muted shrink-0">INVITE LINK:</span>
-                            <div className="text-[10px] text-secondary truncate font-mono select-all">
-                                {typeof window !== 'undefined' && `${window.location.host}/room/${roomId}#secret=${secret?.slice(0, 8)}...`}
-                            </div>
-                        </div>
-                        <Button size="sm" variant="secondary" onClick={copyLink} className="h-6 text-[10px] px-2 shrink-0">
-                            {copied ? <Check size={12} className="mr-1 text-emerald-500" /> : <Copy size={12} className="mr-1" />}
-                            {copied ? "Copied" : "Copy"}
-                        </Button>
-                    </div>
-                </div>
-            )}
-
-            {!isHost && (
-                <div className="flex justify-center mt-2 shrink-0">
-                    <div className="text-[10px] text-center text-muted bg-surface/50 rounded-full py-0.5 px-3 backdrop-blur-sm">
-                        Invite received via link 💌
-                    </div>
-                </div>
-            )}
+            <GameWinOverlay />
 
             {/* Main Content - Full Height/Width */}
             <div className="flex flex-1 overflow-hidden p-4 gap-4">
@@ -251,6 +246,7 @@ export default function RoomPage() {
                     />
 
                     <RatingCard />
+                    <GamesCard roomId={roomId} socket={socket} users={roomState.users} />
                     <ChatCard />
                     <ActivityLog />
                 </div>

@@ -2,10 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { socket } from "@/lib/socket";
 import { useStore } from "@/lib/store";
 
-const STUN_URLS = [
-    "stun:stun.l.google.com:19302",
-    "stun:stun1.l.google.com:19302",
-];
+
 
 
 
@@ -74,26 +71,9 @@ export function useWebRTC(roomId: string) {
         };
     }, []);
 
-    const iceServersRef = useRef<RTCIceServer[]>([{ urls: STUN_URLS }]);
+    const iceServersRef = useRef<RTCIceServer[]>([]);
 
-    // Fetch TURN credentials on mount
-    useEffect(() => {
-        async function fetchIceServers() {
-            try {
-                const res = await fetch("/api/turn");
-                if (res.ok) {
-                    const servers = await res.json();
-                    if (Array.isArray(servers)) {
-                        console.log("Using TURN servers from API");
-                        iceServersRef.current = servers;
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to fetch TURN servers, using default STUN", e);
-            }
-        }
-        fetchIceServers();
-    }, []);
+    // Removed TURN fetching logic as per user request (Tailscale usage)
 
     const createPeer = (peerId?: string) => {
         if (peerRef.current) return peerRef.current;
@@ -102,7 +82,9 @@ export function useWebRTC(roomId: string) {
         console.log("Creating RTCPeerConnection");
 
         const pc = new RTCPeerConnection({
-            iceServers: iceServersRef.current
+            iceServers: [
+                { urls: "stun:stun.l.google.com:19302" }
+            ]
         });
 
         peerRef.current = pc;
