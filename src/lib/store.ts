@@ -32,6 +32,8 @@ export const useStore = create<AppState>((set) => ({
         sharerId: null,
         trackTitle: "",
         ratings: {},
+        crownedUserId: null,
+        gameState: null,
     },
     messages: [],
     logs: [],
