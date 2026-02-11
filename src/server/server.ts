@@ -531,11 +531,12 @@ app.prepare().then(() => {
                 io.to(currentRoomId).emit("game:closed");
 
                 // 4. Auto-remove crown after 5 seconds
+                const roomId = currentRoomId;
                 setTimeout(() => {
-                    const r = rooms.get(currentRoomId);
+                    const r = rooms.get(roomId);
                     if (r && r.crownedUserId === game.winner) {
                         r.crownedUserId = null;
-                        io.to(currentRoomId).emit("room:state", r);
+                        io.to(roomId).emit("room:state", r);
                     }
                 }, 5000);
             }
