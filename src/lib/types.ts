@@ -17,13 +17,14 @@ export interface RoomState {
     ratings: Record<string, number>; // socketId -> rating
     crownedUserId: string | null;
     gameState: GameState | null;
+    puzzle: PuzzleState;
 }
 
 export interface GameState {
-    type: "ttt" | "c4";
+    type: "ttt" | "c4" | "puzzle";
     activePlayerId: string;
     participants: string[]; // [p1, p2]
-    board: any;
+    board: any; // for puzzle, this might be empty as state is in room.puzzle
     winner: string | null;
     isDraw: boolean;
 }
@@ -71,6 +72,11 @@ export interface ServerToClientEvents {
     "game:update": (gameState: GameState) => void;
     "game:closed": () => void;
     "game:won": (data: { winnerId: string; winnerName: string; type: "ttt" | "c4" }) => void;
+
+    // Puzzle Events
+    "puzzle:state": (data: { state: PuzzleState }) => void;
+    "puzzle:solved": (data: { solvedRevision: number }) => void;
+    "valentine:accepted": () => void;
 }
 
 export interface ClientToServerEvents {
@@ -90,8 +96,21 @@ export interface ClientToServerEvents {
     "signal": (data: { roomId: string; signal: any }) => void;
 
     // Game Events
-    "game:start": (type: "ttt" | "c4") => void;
+    "game:start": (type: "ttt" | "c4" | "puzzle") => void;
     "game:move": (move: any) => void;
     "game:reset": () => void;
     "game:close": () => void;
+
+    // Puzzle Events
+    "puzzle:open": (data: { roomId: string }) => void;
+    "puzzle:moveRequest": (data: { roomId: string; tileIndex: number; expectedRevision: number }) => void;
+    "puzzle:shuffleRequest": (data: { roomId: string }) => void;
+}
+
+export interface PuzzleState {
+    tiles: number[]; // 0..8, 8 is empty
+    revision: number;
+    moveCount: number;
+    status: "idle" | "active" | "solved";
+    solvedRevision?: number; // to track unique solved states for popup
 }

@@ -9,7 +9,8 @@ import {
     User,
     Role,
     LogEntry,
-    ChatMessage
+    ChatMessage,
+    PuzzleState
 } from "../lib/types"; // We will need to fix this import path if types are cleaner elsewhere, but they are in src/lib/types.ts which translates to ../lib/types relative to src/server
 import { v4 as uuidv4 } from "uuid";
 
@@ -116,6 +117,12 @@ app.prepare().then(() => {
                     createdAt: Date.now(),
                     crownedUserId: null,
                     gameState: null,
+                    puzzle: {
+                        tiles: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+                        revision: 0,
+                        moveCount: 0,
+                        status: "idle"
+                    }
                 };
                 rooms.set(roomId, room);
                 logActivity(roomId, "join", `Room created by ${name}`, "✨");
@@ -373,6 +380,59 @@ app.prepare().then(() => {
             const participants = [p1];
             if (p2) participants.push(p2);
 
+            // Handle Puzzle Start
+            if (type === "puzzle") {
+                console.log(`[Game] Shuffle requested for room ${currentRoomId}`);
+                // Shuffle the puzzle immediately
+                const tiles = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+                let emptyIdx = 8;
+                let lastEmptyIdx = -1;
+
+                for (let i = 0; i < 80; i++) {
+                    const row = Math.floor(emptyIdx / 3);
+                    const col = emptyIdx % 3;
+                    const candidates = [];
+
+                    if (row > 0) candidates.push(emptyIdx - 3);
+                    if (row < 2) candidates.push(emptyIdx + 3);
+                    if (col > 0) candidates.push(emptyIdx - 1);
+                    if (col < 2) candidates.push(emptyIdx + 1);
+
+                    const validCandidates = candidates.filter(c => c !== lastEmptyIdx);
+                    // Fallback to all candidates if validCandidates is empty (shouldn't happen in grid > 1x1)
+                    const nextIdx = validCandidates.length > 0
+                        ? validCandidates[Math.floor(Math.random() * validCandidates.length)]
+                        : candidates[Math.floor(Math.random() * candidates.length)];
+
+                    [tiles[emptyIdx], tiles[nextIdx]] = [tiles[nextIdx], tiles[emptyIdx]];
+                    lastEmptyIdx = emptyIdx;
+                    emptyIdx = nextIdx;
+                }
+
+                console.log(`[Game] Shuffled tiles: ${tiles.join(",")}`);
+
+                room.puzzle = {
+                    tiles,
+                    revision: room.puzzle.revision + 1,
+                    moveCount: 0,
+                    status: "active"
+                };
+
+                room.gameState = {
+                    type: "puzzle",
+                    activePlayerId: p1,
+                    participants,
+                    board: [], // Puzzle state is separate, but we set this to trigger UI
+                    winner: null,
+                    isDraw: false
+                };
+
+                io.to(currentRoomId).emit("game:started", room.gameState);
+                io.to(currentRoomId).emit("puzzle:state", { state: room.puzzle });
+                logActivity(currentRoomId, "match", `${currentUser.name} started the Puzzle`, "🎁");
+                return;
+            }
+
             let initialBoard: any;
             if (type === "ttt") initialBoard = Array(9).fill(null);
             if (type === "c4") initialBoard = Array.from({ length: 6 }, () => Array(7).fill(null));
@@ -400,6 +460,7 @@ app.prepare().then(() => {
             // Validate turn
             if (game.activePlayerId !== socket.id) return;
             if (game.winner || game.isDraw) return;
+            if (game.type === "puzzle") return; // Puzzle uses separate handlers
 
             // Apply move based on game type
             if (game.type === "ttt") {
@@ -581,8 +642,129 @@ app.prepare().then(() => {
 
         socket.on("room:valentine", () => {
             if (!currentRoomId || !currentUser) return;
-            io.to(currentRoomId).emit("room:valentine", { senderId: currentUser.id });
-            logActivity(currentRoomId, "valentine", `${currentUser.name} triggered Valentine Mode!`, "💖");
+            // Broadcast acceptance to everyone (mostly for host to see toast)
+            io.to(currentRoomId).emit("valentine:accepted");
+            logActivity(currentRoomId, "valentine", `${currentUser.name} said YES! 💖`, "💖");
+        });
+
+        // --- Puzzle Handlers ---
+
+        const getPuzzleState = (roomId: string) => {
+            const room = rooms.get(roomId);
+            return room ? room.puzzle : null;
+        };
+
+        const updatePuzzleState = (roomId: string, newState: PuzzleState) => {
+            const room = rooms.get(roomId);
+            if (room) {
+                room.puzzle = newState;
+                io.to(roomId).emit("puzzle:state", { state: newState });
+            }
+        };
+
+        const checkSolved = (tiles: number[]) => {
+            for (let i = 0; i < 9; i++) {
+                if (tiles[i] !== i) return false;
+            }
+            return true;
+        };
+
+        socket.on("puzzle:open", ({ roomId }) => {
+            const room = rooms.get(roomId);
+            if (room) {
+                socket.emit("puzzle:state", { state: room.puzzle });
+            }
+        });
+
+        socket.on("puzzle:moveRequest", ({ roomId, tileIndex, expectedRevision }) => {
+            const room = rooms.get(roomId);
+            if (!room) return;
+            const puzzle = room.puzzle;
+
+            // Revision check
+            if (puzzle.revision !== expectedRevision) {
+                // Desync or race condition: send latest state back to client
+                socket.emit("puzzle:state", { state: puzzle });
+                return;
+            }
+
+            if (puzzle.status === "solved") return; // No moves after solve
+
+            const emptyIndex = puzzle.tiles.indexOf(8);
+            const clickedIndex = tileIndex;
+
+            // Validate adjacency
+            const row1 = Math.floor(emptyIndex / 3);
+            const col1 = emptyIndex % 3;
+            const row2 = Math.floor(clickedIndex / 3);
+            const col2 = clickedIndex % 3;
+
+            const isAdjacent = (Math.abs(row1 - row2) + Math.abs(col1 - col2)) === 1;
+
+            if (isAdjacent) {
+                // Swap
+                const newTiles = [...puzzle.tiles];
+                [newTiles[emptyIndex], newTiles[clickedIndex]] = [newTiles[clickedIndex], newTiles[emptyIndex]];
+
+                puzzle.tiles = newTiles;
+                puzzle.moveCount++;
+                puzzle.revision++;
+                puzzle.status = "active";
+
+                // Check solved
+                if (checkSolved(puzzle.tiles)) {
+                    puzzle.status = "solved";
+                    puzzle.solvedRevision = puzzle.revision;
+                    io.to(roomId).emit("puzzle:solved", { solvedRevision: puzzle.revision });
+                }
+
+                updatePuzzleState(roomId, puzzle);
+            } else {
+                // Invalid move, just sync client
+                socket.emit("puzzle:state", { state: puzzle });
+            }
+        });
+
+        socket.on("puzzle:shuffleRequest", ({ roomId }) => {
+            const room = rooms.get(roomId);
+            if (!room) return;
+
+            // Generate solvable shuffle by making random valid moves from solved state
+            const tiles = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+            let emptyIdx = 8;
+            let lastEmptyIdx = -1;
+
+            for (let i = 0; i < 80; i++) {
+                const row = Math.floor(emptyIdx / 3);
+                const col = emptyIdx % 3;
+                const candidates = [];
+
+                if (row > 0) candidates.push(emptyIdx - 3); // Up
+                if (row < 2) candidates.push(emptyIdx + 3); // Down
+                if (col > 0) candidates.push(emptyIdx - 1); // Left
+                if (col < 2) candidates.push(emptyIdx + 1); // Right
+
+                // Avoid undoing immediately if possible
+                const validCandidates = candidates.filter(c => c !== lastEmptyIdx);
+                const nextIdx = validCandidates.length > 0
+                    ? validCandidates[Math.floor(Math.random() * validCandidates.length)]
+                    : candidates[Math.floor(Math.random() * candidates.length)];
+
+                // Swap
+                [tiles[emptyIdx], tiles[nextIdx]] = [tiles[nextIdx], tiles[emptyIdx]];
+                lastEmptyIdx = emptyIdx;
+                emptyIdx = nextIdx;
+            }
+
+            room.puzzle = {
+                tiles,
+                revision: room.puzzle.revision + 1,
+                moveCount: 0,
+                status: "active"
+            };
+
+            io.to(roomId).emit("puzzle:state", { state: room.puzzle });
+            logActivity(roomId, "match", "Puzzle shuffled!", "🎲");
         });
 
         socket.on("disconnect", () => {

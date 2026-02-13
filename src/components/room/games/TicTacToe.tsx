@@ -1,6 +1,7 @@
 "use client";
 
 import { GameState, User } from "@/lib/types";
+import { Heart, Sparkles } from "lucide-react";
 
 type Props = {
     roomId: string;
@@ -59,10 +60,16 @@ export default function TicTacToe({ roomId, socket, gameState, users }: Props) {
             `}
                     >
                         {cell === "heart" && (
-                            <img src="/host-player.jpg" alt="Host" className="w-full h-full object-cover rounded-xl shadow-sm" />
+                            <div className="relative">
+                                <Heart className="w-16 h-16 text-red-500 fill-red-500 drop-shadow-md animate-pulse" />
+                                <Sparkles className="w-6 h-6 text-yellow-400 absolute -top-2 -right-2 animate-spin-slow" />
+                            </div>
                         )}
                         {cell === "crown" && (
-                            <img src="/guest-player.jpg" alt="Guest" className="w-full h-full object-cover rounded-xl shadow-sm" />
+                            <div className="relative">
+                                <Heart className="w-16 h-16 text-blue-500 fill-blue-500 drop-shadow-md animate-pulse" />
+                                <Sparkles className="w-6 h-6 text-white absolute -top-2 -right-2 animate-spin-slow" />
+                            </div>
                         )}
                     </button>
                 ))}

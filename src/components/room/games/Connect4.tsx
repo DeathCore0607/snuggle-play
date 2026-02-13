@@ -2,6 +2,7 @@
 
 import { GameState, User } from "@/lib/types";
 import { motion } from "framer-motion";
+import { Heart, Sparkles } from "lucide-react";
 
 const ROWS = 6;
 const COLS = 7;
@@ -55,17 +56,17 @@ export default function Connect4({ roomId, socket, gameState, users }: Props) {
                   ${(isMyTurn && !winner) ? "cursor-pointer hover:bg-black/40" : "cursor-default"}`}
                         >
                             {cell && (
+
                                 <motion.div
                                     initial={{ y: -300, opacity: 0 }}
                                     animate={{ y: 0, opacity: 1 }}
                                     transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                                    className="w-12 h-12 rounded-full shadow-lg overflow-hidden"
+                                    className="w-12 h-12 flex items-center justify-center relative"
                                 >
-                                    <img
-                                        src={cell === "pink" ? "/host-player.jpg" : "/guest-player.jpg"}
-                                        alt={cell === "pink" ? "Host" : "Guest"}
-                                        className="w-full h-full object-cover"
+                                    <Heart
+                                        className={`w-10 h-10 drop-shadow-md ${cell === "pink" ? "text-red-500 fill-red-500" : "text-blue-500 fill-blue-500"}`}
                                     />
+                                    <Sparkles className="w-4 h-4 text-white absolute -top-1 -right-1 animate-pulse" />
                                 </motion.div>
                             )}
                         </div>

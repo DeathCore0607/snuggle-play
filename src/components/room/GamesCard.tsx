@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import TicTacToe from "./games/TicTacToe";
 import Connect4 from "./games/Connect4";
+import PuzzleOverlay from "./games/PuzzleOverlay";
 import { GameState, User } from "@/lib/types";
-import { Gamepad2, X, Circle, Disc } from "lucide-react";
+import { Gamepad2, X, Circle, Disc, Gift } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -14,7 +15,7 @@ type Props = {
 };
 
 export default function GamesCard({ roomId, socket, users }: Props) {
-    const [activeGame, setActiveGame] = useState<"ttt" | "c4" | null>(null);
+    const [activeGame, setActiveGame] = useState<"ttt" | "c4" | "puzzle" | null>(null);
     const [gameState, setGameState] = useState<GameState | null>(null);
 
     useEffect(() => {
@@ -45,7 +46,8 @@ export default function GamesCard({ roomId, socket, users }: Props) {
         };
     }, [socket]);
 
-    const startGame = (type: "ttt" | "c4") => {
+    const startGame = (type: "ttt" | "c4" | "puzzle") => {
+        // Puzzle handled via socket now for sync
         socket.emit("game:start", type);
     };
 
@@ -89,10 +91,17 @@ export default function GamesCard({ roomId, socket, users }: Props) {
                         </div>
                         {/* <span className="text-sm font-bold text-purple-700 dark:text-purple-300">Connect 4</span> */}
                     </button>
+
+                    <button
+                        onClick={() => startGame("puzzle" as any)} // Cast as any temporarily until we update the types/startGame signature if needed, or just let it slide if string is loose
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-red-50/50 dark:bg-red-900/10 hover:bg-red-100/50 dark:hover:bg-red-900/20 border border-red-100 dark:border-red-900/30 transition-all shadow-sm active:scale-95 group"
+                    >
+                        <Gift size={20} className="text-red-500 group-hover:scale-110 transition-transform duration-300" />
+                    </button>
                 </div>
             </div>
 
-            {activeGame && gameState && (
+            {(activeGame === "ttt" || activeGame === "c4") && gameState && (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md">
                     <div className="relative bg-surface-elevated backdrop-blur-xl p-6 rounded-[32px] border border-white/10 shadow-2xl animate-in zoom-in-95 duration-300">
                         <button
@@ -111,6 +120,15 @@ export default function GamesCard({ roomId, socket, users }: Props) {
                         )}
                     </div>
                 </div>
+            )}
+
+            {activeGame === "puzzle" && (
+                <PuzzleOverlay
+                    roomId={roomId}
+                    socket={socket}
+                    onClose={() => setActiveGame(null)}
+                    role={users.find(u => u.id === socket?.id)?.role || "guest"}
+                />
             )}
         </>
     );

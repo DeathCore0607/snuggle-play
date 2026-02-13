@@ -30,10 +30,10 @@ export function StatusBar() {
             setIsValentineActive(true);
         };
 
-        socket.on("room:valentine", onValentine);
+        socket.on("valentine:accepted", onValentine);
 
         return () => {
-            socket.off("room:valentine", onValentine);
+            socket.off("valentine:accepted", onValentine);
         };
     }, []);
 
@@ -156,7 +156,10 @@ export function StatusBar() {
                 </div>
             </div>
             {isValentineActive && (
-                <ValentineOverlay onComplete={() => setIsValentineActive(false)} />
+                <ValentineOverlay
+                    onComplete={() => setIsValentineActive(false)}
+                    variant="greeting"
+                />
             )}
         </>
     );
