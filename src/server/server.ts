@@ -558,7 +558,7 @@ app.prepare().then(() => {
                     game.winner = socket.id;
                 } else {
                     // Check draw (board full)
-                    const isFull = board.every((row: any[]) => row.every(cell => cell !== null));
+                    const isFull = board.every((row: (string | null)[]) => row.every(cell => cell !== null));
                     if (isFull) game.isDraw = true;
                 }
 
@@ -612,7 +612,7 @@ app.prepare().then(() => {
             if (!room.gameState.participants.includes(socket.id)) return;
 
             const type = room.gameState.type;
-            let initialBoard: any;
+            let initialBoard: (string | null)[] | (string | null)[][] = [];
             if (type === "ttt") initialBoard = Array(9).fill(null);
             if (type === "c4") initialBoard = Array.from({ length: 6 }, () => Array(7).fill(null));
 

@@ -15,6 +15,13 @@ export function Stage({ stream }: StageProps) {
     useEffect(() => {
         if (videoRef.current && stream) {
             videoRef.current.srcObject = stream;
+            // Force mute if it's my own share to prevent local loopback
+            const sharerId = useStore.getState().roomState?.sharerId;
+            const myId = useStore.getState().me?.id;
+            if (sharerId === myId) {
+                videoRef.current.muted = true;
+                videoRef.current.volume = 0;
+            }
         }
     }, [stream]);
 

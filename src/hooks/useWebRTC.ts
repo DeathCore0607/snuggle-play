@@ -31,7 +31,11 @@ export function useWebRTC(roomId: string) {
                 console.log("Requesting local media...");
                 stream = await navigator.mediaDevices.getUserMedia({
                     video: true,
-                    audio: true
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
                 });
                 console.log("Got local media:", stream.id);
                 setLocalStream(stream);
@@ -215,7 +219,25 @@ export function useWebRTC(roomId: string) {
         screenShareActiveRef.current = true;
 
         try {
-            const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+            // Optimize for video sharing: 60fps, no audio processing
+            const stream = await navigator.mediaDevices.getDisplayMedia({
+                video: {
+                    frameRate: { ideal: 60, max: 60 }
+                },
+                audio: {
+                    echoCancellation: false,
+                    noiseSuppression: false,
+                    autoGainControl: false
+                }
+            });
+
+            // Hint to browser that we are sharing video/motion content
+            const videoTrack = stream.getVideoTracks()[0];
+            if (videoTrack && "contentHint" in videoTrack) {
+                // @ts-ignore - contentHint is standard but sometimes missing in TS types
+                videoTrack.contentHint = "motion";
+            }
+
             setScreenStream(stream);
             socket.emit("share:start");
 

@@ -146,7 +146,6 @@ export default function RoomPage() {
         );
     }
 
-    const isHost = me.role === "host";
 
     // Decide what to show on Stage
     // If sharing, show share stream (local or remote).
