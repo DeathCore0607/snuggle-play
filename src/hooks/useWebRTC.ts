@@ -17,6 +17,7 @@ export function useWebRTC(roomId: string) {
     const localStreamRef = useRef<MediaStream | null>(null);
     const pendingCandidates = useRef<RTCIceCandidate[]>([]);
     const remotePeerIdRef = useRef<string | null>(null);
+    const primaryStreamIdRef = useRef<string | null>(null);
     const screenShareActiveRef = useRef(false);
 
     // Initialize Local Media
@@ -100,16 +101,18 @@ export function useWebRTC(roomId: string) {
             const stream = event.streams[0];
             if (!stream) return;
 
-            setRemoteStream(prev => {
-                if (!prev) return stream;
-                if (prev.id === stream.id) return prev;
+            // Use ref to identify primary (camera) vs secondary (screen) stream
+            // determining which stream is which based on arrival order
+            if (!primaryStreamIdRef.current) {
+                console.log("Setting primary remote stream:", stream.id);
+                primaryStreamIdRef.current = stream.id;
+                setRemoteStream(stream);
+            } else if (primaryStreamIdRef.current !== stream.id) {
+                console.log("Setting secondary (screen) remote stream:", stream.id);
                 setRemoteScreenStream(stream);
-                return prev;
-            });
-
-            // Redundant safety check to ensure screen stream makes it
-            if (event.streams[0].id !== remoteStream?.id) {
-                setRemoteScreenStream(event.streams[0]);
+            } else {
+                // Update primary stream (e.g. new tracks added to same stream)
+                setRemoteStream(stream);
             }
         };
 
